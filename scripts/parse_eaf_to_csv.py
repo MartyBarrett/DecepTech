@@ -2,7 +2,7 @@ import os
 import pympi
 import pandas as pd
 
-# 🔧 Set your local DecepTech project path here
+# Set your local DecepTech project path here
 BASE_DIR = r'C:\Users\barrettm5\OneDrive - Wentworth Institute of Technology\Desktop\DecepTech_Structured'
 ANNOTATION_DIR = os.path.join(BASE_DIR, 'annotations')
 CSV_OUTPUT_PATH = os.path.join(BASE_DIR, 'csv', 'utterances.csv')
@@ -39,4 +39,4 @@ for fname in os.listdir(ANNOTATION_DIR):
 df = pd.DataFrame(utterances)
 os.makedirs(os.path.join(BASE_DIR, 'csv'), exist_ok=True)
 df.to_csv(CSV_OUTPUT_PATH, index=False)
-print(f"✅ Saved to: {CSV_OUTPUT_PATH}")
+print(f"Saved to: {CSV_OUTPUT_PATH}")
