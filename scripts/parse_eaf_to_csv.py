@@ -24,12 +24,12 @@ for filename in os.listdir(ANNOTATION_DIR):
             continue
 
         for start, end, veracity in veracity_tier:
-            transcript = ""
-            for s2, e2, t2 in transcript_tier:
-                if s2 == start and e2 == end:
-                    transcript = t2.strip()
-                    break
-
+            transcripts = [ 
+                t2.strip()
+                for s2, e2, t2 in transcript_tier
+                if not (e2 < start or s2 > end)
+            ]
+            transcript = " ".join(transcripts)
             # Extract file index to match with video filename
             eaf_index = filename.split('.')[0].split('BoL')[0].strip()
             if eaf_index.isdigit():
