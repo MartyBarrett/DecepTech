@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, ImageStat
 from pydub import AudioSegment, silence
 import cv2
 import threading
@@ -35,47 +35,84 @@ IMAGES = [f for f in all_files if any(f.lower().endswith(ext) for ext in image_e
 class TruthApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("Truth Game")
+        self.root.title("DecepTech")
+
+        # Load and process logo image
+        self.logo_path = "DecepTech_logo.png"
+        self.logo_img_pil = Image.open(self.logo_path).resize((200, 200), Image.Resampling.LANCZOS)
+
+        # Manually set RGB values
+        r, g, b = 14, 28, 43
+        self.BG_COLOR = f'#{r:02x}{g:02x}{b:02x}'
+
+
+        # Set background color
+        self.root.configure(bg=self.BG_COLOR)
+
+        # Convert to PhotoImage (after root is created)
+        self.logo_img = ImageTk.PhotoImage(self.logo_img_pil)
 
         self.recording = False
         self.frames = []
         self.video_frames = []
-        self.image_label = None
-        self.transcript_box = None
-        self.spinner = None
+
+        # Top Frame for Logo
+        self.logo_label = tk.Label(self.root, image=self.logo_img, bg=self.BG_COLOR)
+        self.logo_label.place(x=10, y=10)
+
+        # Main Frame for UI
+        self.main_frame = tk.Frame(self.root, bg=self.BG_COLOR)
+        self.main_frame.pack(pady=20, expand=True)
+
+        # Add a frame inside main_frame to hold the image separately
+        self.image_frame = tk.Frame(self.main_frame, bg=self.BG_COLOR)
+        self.image_frame.pack(pady=10, expand=True)
 
         self.init_ui()
 
     def init_ui(self):
-        self.start_button = tk.Button(self.root, text="Start Recording", command=self.start_recording)
+        # Your other widgets
+        self.start_button = tk.Button(self.main_frame, text="Start Recording", command=self.start_recording)
         self.start_button.pack(pady=10)
 
-        self.stop_button = tk.Button(self.root, text="Stop Recording", command=self.stop_recording, state=tk.DISABLED)
+        self.stop_button = tk.Button(self.main_frame, text="Stop Recording", command=self.stop_recording, state=tk.DISABLED)
         self.stop_button.pack(pady=10)
 
-        self.spinner = ttk.Label(self.root, text="")
+        self.spinner = ttk.Label(self.main_frame, text="")
         self.spinner.pack()
 
-        self.new_image_button = tk.Button(self.root, text="New Random Image", command=self.show_random_image)
+        self.new_image_button = tk.Button(self.main_frame, text="New Random Image", command=self.show_random_image)
         self.new_image_button.pack(pady=5)
 
-        self.transcript_box = tk.Text(self.root, height=6, width=50)
+        self.transcript_box = tk.Text(self.main_frame, height=6, width=50)
         self.transcript_box.pack(pady=10)
 
-        self.image_label = tk.Label(self.root)
-        self.image_label.pack(pady=10)
+        # Note: No image_label created here; it'll be created in show_random_image
 
         self.show_random_image()
 
     def show_random_image(self):
+        # Clear previous image(s)
+        for widget in self.image_frame.winfo_children():
+            widget.destroy()
+
         if not IMAGES:
-            self.image_label.config(text="No dog images found!")
+            label = tk.Label(self.image_frame, text="No images found!", bg=self.BG_COLOR)
+            label.pack()
             return
+
         image_path = random.choice(IMAGES)
         img = Image.open(image_path)
+
+        # Resize with aspect ratio preserved (max 600x600)
+        max_size = (600, 600)
+        img.thumbnail(max_size, Image.Resampling.LANCZOS)
+
         photo = ImageTk.PhotoImage(img)
-        self.image_label.config(image=photo)
+
+        self.image_label = tk.Label(self.image_frame, image=photo, bg=self.BG_COLOR)
         self.image_label.image = photo
+        self.image_label.pack(expand=True)
 
     def start_recording(self):
         self.recording = True
@@ -89,7 +126,6 @@ class TruthApp:
         self.audio = pyaudio.PyAudio()
         self.stream = self.audio.open(format=FORMAT, channels=CHANNELS, rate=SAMPLE_RATE,
                                       input=True, frames_per_buffer=CHUNK)
-
         self.cap = cv2.VideoCapture(0)
 
         threading.Thread(target=self.record_audio).start()
@@ -175,5 +211,6 @@ class TruthApp:
 
 if __name__ == "__main__":
     root = tk.Tk()
+    root.geometry("1000x900")
     app = TruthApp(root)
     root.mainloop()
