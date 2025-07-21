@@ -47,22 +47,22 @@ class TruthApp:
         self.init_ui()
 
     def init_ui(self):
-        self.start_button = tk.Button(self.root, text="Start Recording", command=self.start_recording)
+        self.start_button = tk.Button(self.root, text="Start Recording", command=self.start_recording, bg="#4caf50", font = "bold")
         self.start_button.pack(pady=10)
 
-        self.stop_button = tk.Button(self.root, text="Stop Recording", command=self.stop_recording, state=tk.DISABLED)
+        self.stop_button = tk.Button(self.root, text="Stop Recording", command=self.stop_recording, state=tk.DISABLED, bg="#f44336", fg="white", font = "bold")
         self.stop_button.pack(pady=10)
 
         self.spinner = ttk.Label(self.root, text="")
         self.spinner.pack()
 
-        self.new_image_button = tk.Button(self.root, text="New Random Image", command=self.show_random_image)
+        self.new_image_button = tk.Button(self.root, text="New Random Image", command=self.show_random_image,   bg="#2196f3", fg="white", font=("Arial", 12))
         self.new_image_button.pack(pady=5)
 
-        self.transcript_box = tk.Text(self.root, height=6, width=50)
+        self.transcript_box = tk.Text(self.root, height=6, width=50,  font=("Courier", 10))
         self.transcript_box.pack(pady=10)
 
-        self.image_label = tk.Label(self.root)
+        self.image_label = tk.Label(self.root,  bg="#f0f2f5")
         self.image_label.pack(pady=10)
 
         self.show_random_image()
