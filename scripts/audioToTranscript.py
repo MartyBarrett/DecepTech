@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageTk
+from pydub import AudioSegment, silence
 import threading
 import pyaudio
 import wave
@@ -9,8 +10,8 @@ import speech_recognition as sr
 import glob
 
 # Config
-AUDIO_FILENAME = "recorded_audio.wav"
-TRANSCRIPT_FILENAME = "transcript.txt"
+AUDIO_FILENAME = "audio_clips/recorded_audio.wav"
+TRANSCRIPT_FILENAME = "transcripts/transcript.txt"
 SAMPLE_RATE = 16000
 CHUNK = 1024
 FORMAT = pyaudio.paInt16
@@ -109,15 +110,40 @@ class DogTruthApp:
         self.image_label.image = photo  # Keep reference to avoid GC
 
     def transcribe_audio(self):
+        self.spinner.config(text="Transcribing... ⏳")
+
+        # Step 1: Detect pauses
+        sound = AudioSegment.from_wav(AUDIO_FILENAME)
+        silence_ranges = silence.detect_silence(sound, min_silence_len=1000, silence_thresh=-40)
+        silence_ranges = [(start / 1000.0, stop / 1000.0) for start, stop in silence_ranges]  # ms to seconds
+
+        # Step 2: Transcribe
         recognizer = sr.Recognizer()
         with sr.AudioFile(AUDIO_FILENAME) as source:
             audio_data = recognizer.record(source)
-
             try:
-                text = recognizer.recognize_google(audio_data)
+                raw_text = recognizer.recognize_google(audio_data)
+
+                # Step 3: Split into words
+                words = raw_text.split()
+
+                # Step 4: Insert "uh"/"um" based on silence count
+                pause_count = len(silence_ranges)
+                interval = len(words) // (pause_count + 1) if pause_count else len(words)
+
+                for i in range(pause_count):
+                    insert_at = (i + 1) * interval
+                    filler = random.choice(["uh", "um"])
+                    words.insert(insert_at, filler)
+
+                final_text = ' '.join(words)
+
+                # Step 5: Save and display
                 with open(TRANSCRIPT_FILENAME, 'w') as f:
-                    f.write(text)
-                self.display_transcript(text)
+                    f.write(final_text)
+
+                self.display_transcript(final_text)
+
             except sr.UnknownValueError:
                 self.display_transcript("❌ Could not understand the audio.")
             except sr.RequestError as e:
