@@ -37,19 +37,22 @@ class TruthApp:
         self.root = root
         self.root.title("DecepTech")
 
-        # Load and process logo image
-        self.logo_path = "DecepTech_logo.png"
-        self.logo_img_pil = Image.open(self.logo_path).resize((200, 200), Image.Resampling.LANCZOS)
+        # Load and set background image
+        self.bg_image_path = "background.png"  # Ensure this file exists
+        bg_img_pil = Image.open(self.bg_image_path).resize((1000, 900), Image.Resampling.LANCZOS)
+        self.bg_image = ImageTk.PhotoImage(bg_img_pil)
 
-        # Manually set RGB values
+        # Place background label
+        self.bg_label = tk.Label(self.root, image=self.bg_image)
+        self.bg_label.place(x=0, y=0, relwidth=1, relheight=1)
+
+        # Load and process logo image
+        self.logo_path = "decepticon_logo.png"
+        self.logo_img_pil = Image.open(self.logo_path).resize((200, 200), Image.Resampling.LANCZOS)
         r, g, b = 14, 28, 43
         self.BG_COLOR = f'#{r:02x}{g:02x}{b:02x}'
 
-
-        # Set background color
         self.root.configure(bg=self.BG_COLOR)
-
-        # Convert to PhotoImage (after root is created)
         self.logo_img = ImageTk.PhotoImage(self.logo_img_pil)
 
         self.recording = False
@@ -64,38 +67,34 @@ class TruthApp:
         self.main_frame = tk.Frame(self.root, bg=self.BG_COLOR)
         self.main_frame.pack(pady=20, expand=True)
 
-        # Add a frame inside main_frame to hold the image separately
+        # Frame for holding image display
         self.image_frame = tk.Frame(self.main_frame, bg=self.BG_COLOR)
         self.image_frame.pack(pady=10, expand=True)
 
         self.init_ui()
 
     def init_ui(self):
-        # Your other widgets
-        self.start_button = tk.Button(self.root, text="Start Recording", command=self.start_recording, bg="#4caf50", font = "bold")
+        self.start_button = tk.Button(self.root, text="Start Recording", command=self.start_recording, bg="#4caf50", font="bold")
         self.start_button.pack(pady=10)
 
-        self.stop_button = tk.Button(self.root, text="Stop Recording", command=self.stop_recording, state=tk.DISABLED, bg="#f44336", fg="white", font = "bold")
+        self.stop_button = tk.Button(self.root, text="Stop Recording", command=self.stop_recording, state=tk.DISABLED, bg="#f44336", fg="white", font="bold")
         self.stop_button.pack(pady=10)
 
         self.spinner = ttk.Label(self.root, text="")
         self.spinner.pack()
 
-        self.new_image_button = tk.Button(self.root, text="New Random Image", command=self.show_random_image,   bg="#2196f3", fg="white", font=("Arial", 12))
+        self.new_image_button = tk.Button(self.root, text="New Random Image", command=self.show_random_image, bg="#2196f3", fg="white", font=("Arial", 12))
         self.new_image_button.pack(pady=5)
 
-        self.transcript_box = tk.Text(self.root, height=6, width=50,  font=("Courier", 10))
+        self.transcript_box = tk.Text(self.root, height=6, width=50, font=("Courier", 10))
         self.transcript_box.pack(pady=10)
 
-        self.image_label = tk.Label(self.root,  bg="#f0f2f5")
+        self.image_label = tk.Label(self.root, bg="#f0f2f5")
         self.image_label.pack(pady=10)
-
-        # Note: No image_label created here; it'll be created in show_random_image
 
         self.show_random_image()
 
     def show_random_image(self):
-        # Clear previous image(s)
         for widget in self.image_frame.winfo_children():
             widget.destroy()
 
@@ -107,12 +106,10 @@ class TruthApp:
         image_path = random.choice(IMAGES)
         img = Image.open(image_path)
 
-        # Resize with aspect ratio preserved (max 600x600)
         max_size = (600, 600)
         img.thumbnail(max_size, Image.Resampling.LANCZOS)
 
         photo = ImageTk.PhotoImage(img)
-
         self.image_label = tk.Label(self.image_frame, image=photo, bg=self.BG_COLOR)
         self.image_label.image = photo
         self.image_label.pack(expand=True)
@@ -160,7 +157,15 @@ class TruthApp:
         self.stream.close()
         self.audio.terminate()
 
-        with wave.open(AUDIO_FILENAME, 'wb') as wf:
+        # Generate timestamp once here
+        self.timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+        # Use timestamped filenames for audio and transcript
+        audio_path = os.path.join("audio_clips", f"audio_{self.timestamp}.wav")
+        transcript_path = os.path.join("transcripts", f"transcript_{self.timestamp}.txt")
+
+        # Save audio
+        with wave.open(audio_path, 'wb') as wf:
             wf.setnchannels(CHANNELS)
             wf.setsampwidth(self.audio.get_sample_size(FORMAT))
             wf.setframerate(SAMPLE_RATE)
@@ -170,8 +175,7 @@ class TruthApp:
         cv2.destroyAllWindows()
 
         if self.video_frames:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            video_path = os.path.join(VIDEO_OUTPUT_DIR, f"clip_{timestamp}.avi")
+            video_path = os.path.join(VIDEO_OUTPUT_DIR, f"clip_{self.timestamp}.avi")
             height, width, _ = self.video_frames[0].shape
             fourcc = cv2.VideoWriter_fourcc(*'XVID')
             out = cv2.VideoWriter(video_path, fourcc, FRAME_RATE, (width, height))
@@ -179,15 +183,17 @@ class TruthApp:
                 out.write(frame)
             out.release()
 
-        threading.Thread(target=self.transcribe_audio).start()
+        # Pass the transcript path for saving
+        threading.Thread(target=self.transcribe_audio, args=(audio_path, transcript_path)).start()
 
-    def transcribe_audio(self):
-        sound = AudioSegment.from_wav(AUDIO_FILENAME)
-        silence_ranges = silence.detect_silence(sound, min_silence_len=1500, silence_thresh=-40)
+
+    def transcribe_audio(self, audio_path, transcript_path):
+        sound = AudioSegment.from_wav(audio_path)
+        silence_ranges = silence.detect_silence(sound, min_silence_len=1300, silence_thresh=-40)
         silence_ranges = [(start / 1000.0, stop / 1000.0) for start, stop in silence_ranges]
 
         recognizer = sr.Recognizer()
-        with sr.AudioFile(AUDIO_FILENAME) as source:
+        with sr.AudioFile(audio_path) as source:
             audio_data = recognizer.record(source)
             try:
                 raw_text = recognizer.recognize_google(audio_data)
@@ -199,9 +205,9 @@ class TruthApp:
                     filler = random.choice(["uh", "um"])
                     words.insert(insert_at, filler)
                 final_text = ' '.join(words)
-                with open(TRANSCRIPT_FILENAME, 'w') as f:
+                with open(transcript_path, 'w') as f:
                     f.write(final_text)
-                self.display_transcript(final_text)
+                self.root.after(0, lambda: self.display_transcript(final_text))
             except sr.UnknownValueError:
                 self.display_transcript("❌ Could not understand the audio.")
             except sr.RequestError as e:
@@ -211,6 +217,8 @@ class TruthApp:
         self.spinner.config(text="✅ Done")
         self.transcript_box.delete("1.0", tk.END)
         self.transcript_box.insert(tk.END, text)
+
+
 
 if __name__ == "__main__":
     root = tk.Tk()
