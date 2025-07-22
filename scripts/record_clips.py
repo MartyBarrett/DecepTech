@@ -10,12 +10,14 @@ import random
 import speech_recognition as sr
 import os
 import glob
+import csv
 from datetime import datetime
 
 # === Config ===
-AUDIO_FILENAME = "audio_clips/recorded_audio.wav"
+AUDIO_FILENAME = "CroppedAudio/recorded_audio.wav"
 TRANSCRIPT_FILENAME = "transcripts/transcript.txt"
 VIDEO_OUTPUT_DIR = "CroppedClips"
+CSV_LOG_PATH = "recordings_log.csv"
 SAMPLE_RATE = 16000
 CHUNK = 1024
 FORMAT = pyaudio.paInt16
@@ -23,9 +25,15 @@ CHANNELS = 1
 FRAME_RATE = 20.0
 
 # Ensure output folders exist
-os.makedirs("audio_clips", exist_ok=True)
+os.makedirs("CroppedAudio", exist_ok=True)
 os.makedirs("transcripts", exist_ok=True)
 os.makedirs(VIDEO_OUTPUT_DIR, exist_ok=True)
+
+# Create CSV log with headers if it doesn't exist
+if not os.path.exists(CSV_LOG_PATH):
+    with open(CSV_LOG_PATH, mode='w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(['Timestamp', 'Audio Filename', 'Video Filename'])
 
 # Image selection
 image_extensions = ['.jpg', '.jpeg', '.png', '.gif']
@@ -161,7 +169,7 @@ class TruthApp:
         self.timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
         # Use timestamped filenames for audio and transcript
-        audio_path = os.path.join("audio_clips", f"audio_{self.timestamp}.wav")
+        audio_path = os.path.join("CroppedAudio", f"audio_{self.timestamp}.wav")
         transcript_path = os.path.join("transcripts", f"transcript_{self.timestamp}.txt")
 
         # Save audio
@@ -174,6 +182,7 @@ class TruthApp:
         self.cap.release()
         cv2.destroyAllWindows()
 
+        video_path = ""  # Default in case no video is saved
         if self.video_frames:
             video_path = os.path.join(VIDEO_OUTPUT_DIR, f"clip_{self.timestamp}.avi")
             height, width, _ = self.video_frames[0].shape
@@ -183,9 +192,13 @@ class TruthApp:
                 out.write(frame)
             out.release()
 
+        # Append filenames to CSV log
+        with open(CSV_LOG_PATH, mode='a', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow([self.timestamp, audio_path, video_path])
+
         # Pass the transcript path for saving
         threading.Thread(target=self.transcribe_audio, args=(audio_path, transcript_path)).start()
-
 
     def transcribe_audio(self, audio_path, transcript_path):
         sound = AudioSegment.from_wav(audio_path)
@@ -217,8 +230,6 @@ class TruthApp:
         self.spinner.config(text="✅ Done")
         self.transcript_box.delete("1.0", tk.END)
         self.transcript_box.insert(tk.END, text)
-
-
 
 if __name__ == "__main__":
     root = tk.Tk()
