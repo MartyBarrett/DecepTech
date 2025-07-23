@@ -114,8 +114,8 @@ class TruthApp:
         image_path = random.choice(IMAGES)
         img = Image.open(image_path)
 
-        max_size = (600, 600)
-        img.thumbnail(max_size, Image.Resampling.LANCZOS)
+        fixed_size = (400, 400)
+        img = img.resize(fixed_size, Image.Resampling.LANCZOS)
 
         photo = ImageTk.PhotoImage(img)
         self.image_label = tk.Label(self.image_frame, image=photo, bg=self.BG_COLOR)
