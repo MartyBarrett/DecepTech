@@ -47,7 +47,7 @@ class TruthApp:
 
         # Load and set background image
         self.bg_image_path = "background.png"  # Ensure this file exists
-        bg_img_pil = Image.open(self.bg_image_path).resize((1000, 900), Image.Resampling.LANCZOS)
+        bg_img_pil = Image.open(self.bg_image_path).resize((1600, 1500), Image.Resampling.LANCZOS)
         self.bg_image = ImageTk.PhotoImage(bg_img_pil)
 
         # Place background label
@@ -56,7 +56,7 @@ class TruthApp:
 
         # Load and process logo image
         self.logo_path = "decepticon_logo.png"
-        self.logo_img_pil = Image.open(self.logo_path).resize((200, 200), Image.Resampling.LANCZOS)
+        self.logo_img_pil = Image.open(self.logo_path).resize((300, 300), Image.Resampling.LANCZOS)
         r, g, b = 14, 28, 43
         self.BG_COLOR = f'#{r:02x}{g:02x}{b:02x}'
 
@@ -233,6 +233,6 @@ class TruthApp:
 
 if __name__ == "__main__":
     root = tk.Tk()
-    root.geometry("1000x900")
+    root.state('zoomed')  
     app = TruthApp(root)
     root.mainloop()
