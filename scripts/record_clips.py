@@ -79,6 +79,10 @@ class TruthApp:
         self.image_frame = tk.Frame(self.main_frame, bg=self.BG_COLOR)
         self.image_frame.pack(pady=10, expand=True)
 
+        # Camera location
+        self.camera_label = tk.Label(self.root, bg="black")
+        self.camera_label.place(relx=1.0, y=10, anchor='ne') 
+
         self.init_ui()
 
     def init_ui(self):
@@ -145,13 +149,24 @@ class TruthApp:
             self.frames.append(data)
 
     def record_video(self):
-        while self.recording:
-            ret, frame = self.cap.read()
-            if ret:
-                self.video_frames.append(frame)
-            cv2.imshow('Recording - Press Q to stop', frame)
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                self.stop_recording()
+        def update_frame():
+            if self.recording:
+                ret, frame = self.cap.read()
+                if ret:
+                    self.video_frames.append(frame)
+
+                    # Convert BGR to RGB
+                    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    img_pil = Image.fromarray(frame_rgb)
+                    img_pil = img_pil.resize((300, 300), Image.Resampling.LANCZOS)  
+                    imgtk = ImageTk.PhotoImage(image=img_pil)
+
+                    self.camera_label.imgtk = imgtk
+                    self.camera_label.config(image=imgtk)
+
+                self.root.after(50, update_frame)  
+        update_frame()
+
 
     def stop_recording(self):
         if not self.recording:
@@ -199,6 +214,8 @@ class TruthApp:
 
         # Pass the transcript path for saving
         threading.Thread(target=self.transcribe_audio, args=(audio_path, transcript_path)).start()
+
+        self.camera_label.config(image='')  # Clear camera display
 
     def transcribe_audio(self, audio_path, transcript_path):
         sound = AudioSegment.from_wav(audio_path)
