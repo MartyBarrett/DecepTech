@@ -235,8 +235,6 @@ class TruthApp:
                     filler = random.choice(["uh", "um"])
                     words.insert(insert_at, filler)
                 final_text = ' '.join(words)
-                with open(transcript_path, 'w') as f:
-                    f.write(final_text)
                 self.root.after(0, lambda: self.display_transcript(final_text))
             except sr.UnknownValueError:
                 self.display_transcript("❌ Could not understand the audio.")
