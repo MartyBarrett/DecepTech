@@ -12,7 +12,14 @@ import os
 import glob
 import csv
 from datetime import datetime
+<<<<<<< HEAD
 import subprocess
+=======
+import joblib
+import os
+
+
+>>>>>>> 0060034cd5dc3ede747b2cefe66f751ea58eb910
 
 # === Config ===
 AUDIO_FILENAME = "CroppedAudio/recorded_audio.wav"
