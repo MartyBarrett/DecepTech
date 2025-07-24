@@ -1,12 +1,52 @@
-# DecepTech
+# DecepTech: Multimodal Deception Detection
 
-**DecepTech** is a multimodal deception detection system that analyzes short video segments to determine whether a speaker is being truthful or deceptive. This project is based on annotated `.eaf` files and associated video clips from the Bag of Lies dataset.
+**DecepTech** is an end-to-end pipeline for automatically detecting deception by fusing audio and facial cues. It combines pretrained speech embeddings, handcrafted audio features, and normalized facial‐landmark vectors into an ensemble of machine-learning classifiers.
 
-# Project Structure 
-├── annotations/ # Contains ELAN .eaf annotation files
-├── csv/ # Output directory for parsed utterances (utterances.csv)
-├── scripts/ # Utility scripts for parsing and inspection
-│ ├── parse_eaf_to_csv.py # Parses .eaf files into CSV
-│ └── list_tiers.py # Lists available tiers in EAF files
-├── VideoClips/ # MP4 video clips matching each .eaf file
-├── audio_clips/ # (to be created) Extracted audio segments for ML
+---
+
+## 🚀 Features
+
+- **Audio Pipeline**  
+  - Wav2Vec2 → 768-dim embeddings  
+  - MFCC extraction (13-dim)  
+  - Random Forest & Logistic Regression benchmarks  
+- **Vision Pipeline**  
+  - dlib 68-point facial landmarks → 136-dim vectors  
+  - Random Forest & XGBoost classifiers  
+- **Multimodal Ensemble**  
+  - Stacked XGBoost on face-score + MFCC features  
+  - Near-perfect test performance  
+- **UI for Batch Processing**  
+  - Lightweight Tkinter interface (`pipelineUI.py`)  
+  - Real-time logs, progress bars, and result export  
+- **Jupyter Notebooks** for exploratory analysis and visualization  
+
+---
+
+## 📁 Repository Structure
+
+```text
+DecepTech/
+├── notebooks/
+│   ├── TrainModel.ipynb
+│   ├── VideoAndAudioModel.ipynb
+│   ├── VideoExtract.ipynb
+│   └── VideoModelScript.ipynb
+├── scripts/
+│   ├── audio_pipeline.py
+│   ├── video_pipeline.py
+│   ├── train_models.py
+│   └── pipelineUI.py
+├── data/
+│   ├── audio_clips/            # raw .wav files
+│   ├── CroppedClips/           # raw video clips
+│   ├── transcripts/            # optional transcripts
+│   └── csv/                    # metadata CSVs
+├── models/
+│   ├── deceptech_model.pkl
+│   ├── deceptech_logreg_model.pkl
+│   ├── rf_face_model.pkl
+│   ├── xgb_face_model.json
+│   └── stacked_model.pkl
+├── requirements.txt
+└── README.md
