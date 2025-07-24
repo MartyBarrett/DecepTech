@@ -12,6 +12,7 @@ import os
 import glob
 import csv
 from datetime import datetime
+import subprocess
 
 # === Config ===
 AUDIO_FILENAME = "CroppedAudio/recorded_audio.wav"
@@ -213,9 +214,30 @@ class TruthApp:
             writer.writerow([self.timestamp, audio_path, video_path])
 
         # Pass the transcript path for saving
-        threading.Thread(target=self.transcribe_audio, args=(audio_path, transcript_path)).start()
+        #threading.Thread(target=self.transcribe_audio, args=(audio_path, transcript_path)).start()
 
         self.camera_label.config(image='')  # Clear camera display
+        self.run_prediction_inference(audio_path, video_path)
+
+    
+
+
+    def run_prediction_inference(self, audio_path, video_path):
+        python_executable = r"C:\Users\connellj2\OneDrive - Wentworth Institute of Technology\Documents\DecepTech\decep_env\Scripts\python.exe"
+        inference_script = r"C:\Users\connellj2\OneDrive - Wentworth Institute of Technology\Documents\DecepTech\decep_env\Scripts\predictor.py"  # Adjust if located elsewhere
+
+        try:
+            result = subprocess.run(
+                [python_executable, inference_script, "--video", video_path, "--audio", audio_path],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            output = result.stdout.strip()
+            self.root.after(0, lambda: self.transcript_box.insert(tk.END, f"\n🧠 Model Verdict: {output}\n"))
+        except subprocess.CalledProcessError as e:
+            error_msg = f"❌ Inference Error:\n{e.stderr or str(e)}"
+            self.root.after(0, lambda: self.transcript_box.insert(tk.END, error_msg))
 
     def transcribe_audio(self, audio_path, transcript_path):
         sound = AudioSegment.from_wav(audio_path)
