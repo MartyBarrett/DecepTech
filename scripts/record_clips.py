@@ -34,7 +34,7 @@ os.makedirs(VIDEO_OUTPUT_DIR, exist_ok=True)
 if not os.path.exists(CSV_LOG_PATH):
     with open(CSV_LOG_PATH, mode='w', newline='') as f:
         writer = csv.writer(f)
-        writer.writerow(['Timestamp', 'Audio Filename', 'Video Filename'])
+        writer.writerow(['Timestamp', 'Audio Filename', 'Video Filename', 'Outcome'])
 
 # Image selection
 image_extensions = ['.jpg', '.jpeg', '.png', '.gif']
@@ -60,13 +60,20 @@ class TruthApp:
         self.logo_img_pil = Image.open(self.logo_path).resize((300, 300), Image.Resampling.LANCZOS)
         r, g, b = 14, 28, 43
         self.BG_COLOR = f'#{r:02x}{g:02x}{b:02x}'
-
         self.root.configure(bg=self.BG_COLOR)
         self.logo_img = ImageTk.PhotoImage(self.logo_img_pil)
 
+        # Recording state
         self.recording = False
         self.frames = []
         self.video_frames = []
+
+        # Label state for Outcome
+        self.label_value = None
+
+        # Bind keys 1 and 0 to set outcome
+        self.root.bind('1', self.on_key_1)
+        self.root.bind('0', self.on_key_0)
 
         # Top Frame for Logo
         self.logo_label = tk.Label(self.root, image=self.logo_img, bg=self.BG_COLOR)
@@ -82,24 +89,40 @@ class TruthApp:
 
         # Camera location
         self.camera_label = tk.Label(self.root, bg="black")
-        self.camera_label.place(relx=1.0, y=10, anchor='ne') 
+        self.camera_label.place(relx=1.0, y=10, anchor='ne')
 
         self.init_ui()
 
     def init_ui(self):
-        self.start_button = tk.Button(self.root, text="Start Recording", command=self.start_recording, bg="#4caf50", font="bold")
+        self.start_button = tk.Button(
+            self.root, text="Start Recording",
+            command=self.start_recording,
+            bg="#4caf50", font="bold"
+        )
         self.start_button.pack(pady=10)
 
-        self.stop_button = tk.Button(self.root, text="Stop Recording", command=self.stop_recording, state=tk.DISABLED, bg="#f44336", fg="white", font="bold")
+        self.stop_button = tk.Button(
+            self.root, text="Stop Recording",
+            command=self.stop_recording,
+            state=tk.DISABLED, bg="#f44336",
+            fg="white", font="bold"
+        )
         self.stop_button.pack(pady=10)
 
         self.spinner = ttk.Label(self.root, text="")
         self.spinner.pack()
 
-        self.new_image_button = tk.Button(self.root, text="New Random Image", command=self.show_random_image, bg="#2196f3", fg="white", font=("Arial", 12))
+        self.new_image_button = tk.Button(
+            self.root, text="New Random Image",
+            command=self.show_random_image,
+            bg="#2196f3", fg="white",
+            font=("Arial", 12)
+        )
         self.new_image_button.pack(pady=5)
 
-        self.transcript_box = tk.Text(self.root, height=6, width=50, font=("Courier", 10))
+        self.transcript_box = tk.Text(
+            self.root, height=6, width=50, font=("Courier", 10)
+        )
         self.transcript_box.pack(pady=10)
 
         self.image_label = tk.Label(self.root, bg="#f0f2f5")
@@ -118,11 +141,10 @@ class TruthApp:
 
         image_path = random.choice(IMAGES)
         img = Image.open(image_path)
-
         fixed_size = (400, 400)
         img = img.resize(fixed_size, Image.Resampling.LANCZOS)
-
         photo = ImageTk.PhotoImage(img)
+
         self.image_label = tk.Label(self.image_frame, image=photo, bg=self.BG_COLOR)
         self.image_label.image = photo
         self.image_label.pack(expand=True)
@@ -137,12 +159,15 @@ class TruthApp:
         self.spinner.config(text="Recording... 🎙️")
 
         self.audio = pyaudio.PyAudio()
-        self.stream = self.audio.open(format=FORMAT, channels=CHANNELS, rate=SAMPLE_RATE,
-                                      input=True, frames_per_buffer=CHUNK)
+        self.stream = self.audio.open(
+            format=FORMAT, channels=CHANNELS,
+            rate=SAMPLE_RATE, input=True,
+            frames_per_buffer=CHUNK
+        )
         self.cap = cv2.VideoCapture(0)
 
-        threading.Thread(target=self.record_audio).start()
-        threading.Thread(target=self.record_video).start()
+        threading.Thread(target=self.record_audio, daemon=True).start()
+        threading.Thread(target=self.record_video, daemon=True).start()
 
     def record_audio(self):
         while self.recording:
@@ -155,52 +180,44 @@ class TruthApp:
                 ret, frame = self.cap.read()
                 if ret:
                     self.video_frames.append(frame)
-
-                    # Convert BGR to RGB
                     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     img_pil = Image.fromarray(frame_rgb)
-                    img_pil = img_pil.resize((300, 300), Image.Resampling.LANCZOS)  
+                    img_pil = img_pil.resize((300, 300), Image.Resampling.LANCZOS)
                     imgtk = ImageTk.PhotoImage(image=img_pil)
-
                     self.camera_label.imgtk = imgtk
                     self.camera_label.config(image=imgtk)
-
-                self.root.after(50, update_frame)  
+                self.root.after(50, update_frame)
         update_frame()
-
 
     def stop_recording(self):
         if not self.recording:
             return
+
         self.recording = False
         self.start_button.config(state=tk.NORMAL)
         self.stop_button.config(state=tk.DISABLED)
         self.spinner.config(text="Transcribing... ⏳")
 
+        # Stop audio
         self.stream.stop_stream()
         self.stream.close()
         self.audio.terminate()
 
-        # Generate timestamp once here
-        self.timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        # Timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-        # Use timestamped filenames for audio and transcript
-        audio_path = os.path.join("CroppedAudio", f"audio_{self.timestamp}.wav")
-        transcript_path = os.path.join("transcripts", f"transcript_{self.timestamp}.txt")
-
-        # Save audio
+        # Save audio file
+        audio_path = os.path.join("CroppedAudio", f"audio_{timestamp}.wav")
         with wave.open(audio_path, 'wb') as wf:
             wf.setnchannels(CHANNELS)
             wf.setsampwidth(self.audio.get_sample_size(FORMAT))
             wf.setframerate(SAMPLE_RATE)
             wf.writeframes(b''.join(self.frames))
 
-        self.cap.release()
-        cv2.destroyAllWindows()
-
-        video_path = ""  # Default in case no video is saved
+        # Save video file
+        video_path = ""
         if self.video_frames:
-            video_path = os.path.join(VIDEO_OUTPUT_DIR, f"clip_{self.timestamp}.avi")
+            video_path = os.path.join(VIDEO_OUTPUT_DIR, f"clip_{timestamp}.avi")
             height, width, _ = self.video_frames[0].shape
             fourcc = cv2.VideoWriter_fourcc(*'XVID')
             out = cv2.VideoWriter(video_path, fourcc, FRAME_RATE, (width, height))
@@ -208,41 +225,40 @@ class TruthApp:
                 out.write(frame)
             out.release()
 
-        # Append filenames to CSV log
+        # Append to CSV with label
         with open(CSV_LOG_PATH, mode='a', newline='') as f:
             writer = csv.writer(f)
-            writer.writerow([self.timestamp, audio_path, video_path])
+            outcome = self.label_value if self.label_value is not None else ''
+            writer.writerow([timestamp, audio_path, video_path, outcome])
+            self.label_value = None  # reset for next recording
 
-        # Pass the transcript path for saving
-        #threading.Thread(target=self.transcribe_audio, args=(audio_path, transcript_path)).start()
+        # Clear camera display
+        self.camera_label.config(image='')
 
-        self.camera_label.config(image='')  # Clear camera display
+        # Run model inference
         self.run_prediction_inference(audio_path, video_path)
-
-    
-
 
     def run_prediction_inference(self, audio_path, video_path):
         python_executable = r"C:\Users\connellj2\OneDrive - Wentworth Institute of Technology\Documents\DecepTech\decep_env\Scripts\python.exe"
-        inference_script = r"C:\Users\connellj2\OneDrive - Wentworth Institute of Technology\Documents\DecepTech\decep_env\Scripts\predictor.py"  # Adjust if located elsewhere
+        inference_script = r"C:\Users\connellj2\OneDrive - Wentworth Institute of Technology\Documents\DecepTech\decep_env\Scripts\predictor.py"
 
         try:
             result = subprocess.run(
                 [python_executable, inference_script, "--video", video_path, "--audio", audio_path],
-                capture_output=True,
-                text=True,
-                check=True
+                capture_output=True, text=True, check=True
             )
             output = result.stdout.strip()
-            self.root.after(0, lambda: self.transcript_box.insert(tk.END, f"\n🧠 Model Verdict: {output}\n"))
+            self.root.after(0, lambda: self.transcript_box.insert(
+                tk.END, f"\n🧠 Model Verdict: {output}\n"))
         except subprocess.CalledProcessError as e:
-            error_msg = f"❌ Inference Error:\n{e.stderr or str(e)}"
-            self.root.after(0, lambda: self.transcript_box.insert(tk.END, error_msg))
+            err = e.stderr or str(e)
+            self.root.after(0, lambda: self.transcript_box.insert(
+                tk.END, f"❌ Inference Error:\n{err}"))
 
     def transcribe_audio(self, audio_path, transcript_path):
         sound = AudioSegment.from_wav(audio_path)
         silence_ranges = silence.detect_silence(sound, min_silence_len=1300, silence_thresh=-40)
-        silence_ranges = [(start / 1000.0, stop / 1000.0) for start, stop in silence_ranges]
+        silence_ranges = [(start/1000.0, stop/1000.0) for start, stop in silence_ranges]
 
         recognizer = sr.Recognizer()
         with sr.AudioFile(audio_path) as source:
@@ -268,8 +284,19 @@ class TruthApp:
         self.transcript_box.delete("1.0", tk.END)
         self.transcript_box.insert(tk.END, text)
 
+    def on_key_1(self, event):
+        """User pressed 1 → mark Outcome=1"""
+        self.label_value = 1
+        print("[Outcome] set to 1")
+
+    def on_key_0(self, event):
+        """User pressed 0 → mark Outcome=0"""
+        self.label_value = 0
+        print("[Outcome] set to 0")
+
+
 if __name__ == "__main__":
     root = tk.Tk()
-    root.state('zoomed')  
+    root.state('zoomed')
     app = TruthApp(root)
     root.mainloop()
