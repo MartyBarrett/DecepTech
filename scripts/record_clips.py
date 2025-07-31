@@ -228,7 +228,7 @@ class TruthApp:
 
         try:
             result = subprocess.run(
-                [python_executable, inference_script, "--video", video_path, "--audio", audio_path],
+                [python_executable, inference_script, "--video", video_path, "--audio", audio_path, "--visualize"],
                 capture_output=True,
                 text=True,
                 check=True
