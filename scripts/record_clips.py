@@ -244,23 +244,18 @@ class TruthApp:
 
         try:
             result = subprocess.run(
-<<<<<<< HEAD
                 [python_executable, inference_script, "--video", video_path, "--audio", audio_path, "--visualize"],
                 capture_output=True,
                 text=True,
                 check=True
-=======
-                [python_executable, inference_script, "--video", video_path, "--audio", audio_path],
-                capture_output=True, text=True, check=True
->>>>>>> ec3a49f476891e2a41d0209b0c0a1b88a499b2fc
             )
             output = result.stdout.strip()
             self.root.after(0, lambda: self.transcript_box.insert(
-                tk.END, f"\n🧠 Model Verdict: {output}\n"))
+                tk.END, f"\nModel Verdict: {output}\n"))
         except subprocess.CalledProcessError as e:
             err = e.stderr or str(e)
             self.root.after(0, lambda: self.transcript_box.insert(
-                tk.END, f"❌ Inference Error:\n{err}"))
+                tk.END, f"Inference Error:\n{err}"))
 
     def transcribe_audio(self, audio_path, transcript_path):
         sound = AudioSegment.from_wav(audio_path)
