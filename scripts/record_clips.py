@@ -121,7 +121,7 @@ class TruthApp:
         self.new_image_button.pack(pady=5)
 
         self.transcript_box = tk.Text(
-            self.root, height=6, width=50, font=("Courier", 10)
+            self.root, height=15, width=75, font=("Courier", 10)
         )
         self.transcript_box.pack(pady=10)
 
